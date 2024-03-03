@@ -1,4 +1,10 @@
 from typing import Callable, Any, Dict
+from inspect import signature
+from sys import stdout
+
+import json
+
+
 from .utilities import (
     get_type_value,
     get_typing_instance,
@@ -7,14 +13,15 @@ from .utilities import (
 )
 from .constants import (
     PRIMITIVE_TYPES_MAPPER,
+    RETURN,
     SUPPORTED_TYPES,
     SUPPORTED_COMPLEX_TYPES,
 )
 from .converters import convert
 
 
-def get_annotations(func: Callable):
-    annotations = func.__annotations__
+def get_annotations(function: Callable):
+    annotations = function.__annotations__
 
     for key, value in annotations.items():
         if is_typing_instance(value):
@@ -23,6 +30,13 @@ def get_annotations(func: Callable):
             annotations[key] = value.__name__
         else:
             raise ValueError("Unknown annotation")
+
+    for arg in signature(function).parameters.keys():
+        if arg not in annotations:
+            annotations[arg] = "Any"
+
+    if RETURN not in annotations:
+        annotations[RETURN] = "Any"
 
     return annotations
 
@@ -43,3 +57,10 @@ def convert_annotations_to_typescript_types(annotations: Dict[str, Any]):
             types[key] = convert(value)
 
     return types
+
+
+def send_types(function: Callable):
+    types = convert_annotations_to_typescript_types(get_annotations(function))
+
+    stdout.write(json.dumps({"types": types}))
+    stdout.flush()

@@ -2,13 +2,12 @@ import re
 from typing import List
 
 from .constants import EXCLUDE_COMPLEX_TYPES_REGEXP
-from ..constants import (
+from foreign_handlers.constants import (
     PRIMITIVE_TYPES_MAPPER,
     SUPPORTED_COMPLEX_TYPES,
     SUPPORTED_PRIMITIVE_TYPES,
 )
-from ..utilities import get_type_value
-from .list import convert_list
+from foreign_handlers.utilities import get_type_value
 
 
 def convert(type: str) -> str:
@@ -47,7 +46,6 @@ def convert_python_to_typescript(types_string: str) -> List[str]:
     return ts_types
 
 
-# Cross-import
 def convert_dict(type: str) -> str:
     brackets_start = 0
 
@@ -77,7 +75,6 @@ def convert_dict(type: str) -> str:
     raise ValueError(f"Dict value is not supported.Type: {type}.")
 
 
-# Cross-import
 def convert_tuple(type: str) -> str:
     brackets_start = 0
 
@@ -93,7 +90,6 @@ def convert_tuple(type: str) -> str:
     return f"[{types_string}]"
 
 
-# Cross-import
 def convert_union(type: str) -> str:
     brackets_start = 0
 
@@ -108,3 +104,24 @@ def convert_union(type: str) -> str:
         raise ValueError("Union must have 2 or more arguments")
 
     return " | ".join(ts_types)
+
+
+def convert_list(type: str) -> str:
+    brackets_start = 0
+
+    try:
+        brackets_start = type.index("[")
+    except ValueError:
+        return "any[]"
+
+    type_arg = type[brackets_start + 1 : -1]
+
+    if type_arg in SUPPORTED_PRIMITIVE_TYPES:
+        return f"{PRIMITIVE_TYPES_MAPPER[type_arg]}[]"
+
+    type_value_basic = get_type_value(type_arg)
+
+    if type_value_basic in SUPPORTED_COMPLEX_TYPES:
+        return f"{convert(type_arg)}[]"
+
+    raise ValueError(f"List value is not supported. Type: {type}.")
