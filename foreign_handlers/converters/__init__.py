@@ -26,10 +26,13 @@ def convert(type: str) -> str:
 
     if type.startswith("Union"):
         return convert_union(type)
+
     if type.startswith("Optional"):
         return convert_optional(type)
+
     if type.startswith("Literal"):
         return convert_literal(type)
+
     return ""
 
 
@@ -156,8 +159,6 @@ def convert_optional(type: str) -> str:
 
 
 def convert_literal(type: str) -> str:
-    print(type)
-
     brackets_start = 0
 
     try:
