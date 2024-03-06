@@ -1,7 +1,11 @@
 import re
 from typing import List
 
-from .constants import EXCLUDE_COMPLEX_TYPES_REGEXP
+from .constants import (
+    EXCLUDE_COMMAS_INSIDE_STRINGS_REGEXP,
+    EXCLUDE_COMPLEX_TYPES_REGEXP,
+    QUOTE,
+)
 from foreign_handlers.constants import (
     PRIMITIVE_TYPES_MAPPER,
     SUPPORTED_COMPLEX_TYPES,
@@ -22,7 +26,10 @@ def convert(type: str) -> str:
 
     if type.startswith("Union"):
         return convert_union(type)
-
+    if type.startswith("Optional"):
+        return convert_optional(type)
+    if type.startswith("Literal"):
+        return convert_literal(type)
     return ""
 
 
@@ -125,3 +132,51 @@ def convert_list(type: str) -> str:
         return f"{convert(type_arg)}[]"
 
     raise ValueError(f"List value is not supported. Type: {type}.")
+
+
+def convert_optional(type: str) -> str:
+    brackets_start = 0
+
+    try:
+        brackets_start = type.index("[")
+    except ValueError:
+        raise ValueError("Don't use optional type without arguments")
+
+    type_arg = type[brackets_start + 1 : -1]
+
+    if type_arg in SUPPORTED_PRIMITIVE_TYPES:
+        return f"{PRIMITIVE_TYPES_MAPPER[type_arg]}| null | undefined"
+
+    type_value_basic = get_type_value(type_arg)
+
+    if type_value_basic in SUPPORTED_COMPLEX_TYPES:
+        return f"{convert(type_arg)}| null | undefined"
+
+    raise ValueError(f"Optional value is not supported. Type: {type}.")
+
+
+def convert_literal(type: str) -> str:
+    print(type)
+
+    brackets_start = 0
+
+    try:
+        brackets_start = type.index("[")
+    except ValueError:
+        raise ValueError("Don't use optional type without arguments")
+
+    type_args = re.split(
+        EXCLUDE_COMMAS_INSIDE_STRINGS_REGEXP, type[brackets_start + 1 : -1]
+    )
+
+    for type_arg in type_args:
+        is_string = type_arg.startswith(QUOTE) and type_arg.endswith(QUOTE)
+        is_number = type_arg.isnumeric()
+        is_bool = type_arg == "True" or type_arg == "False"
+
+        if not (is_string or is_number or is_bool):
+            raise ValueError(
+                f"Literal value {type_arg} is not supported. Type: {type}."
+            )
+
+    return " | ".join(type_args)
